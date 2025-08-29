@@ -42,11 +42,14 @@ class FullAttention(nn.Module):
         self.num_kv_heads = num_heads
         self.num_kv_groups = num_heads // self.num_kv_heads
         self.hidden_size = hidden_size
-        self.head_dim = head_dim
+        if head_dim is None:
+            self.head_dim = self.hidden_size // self.num_heads
+        else:
+            self.head_dim = head_dim
         self.kv_dim = self.num_kv_heads * self.head_dim
         self.layer_idx = layer_idx
 
-        self.norm = nn.LayerNorm(self.hidden_size, eps=norm_eps)
+        self.norm = nn.LayerNorm(self.hidden_size, eps=norm_eps, bias=False)
 
         self.q_proj = nn.Linear(
             self.hidden_size, self.num_heads * self.head_dim, bias=False
@@ -95,7 +98,7 @@ class FullAttention(nn.Module):
         if not output_attentions:
             attentions = None
 
-        return o, attentions, None
+        return o
 
 
 class Mlp(nn.Module):
@@ -109,6 +112,7 @@ class Mlp(nn.Module):
     def __init__(self,
         hidden_size: int = 768,
         intermediate_size: int = None,
+        norm_eps: float = 1e-5,
     ):
         super().__init__()
         if intermediate_size is None:
@@ -117,7 +121,7 @@ class Mlp(nn.Module):
         self.fc1 = nn.Linear(hidden_size, intermediate_size)
         self.fc2 = nn.Linear(intermediate_size, hidden_size)
         self.gelu = nn.GELU()
-        self.norm = nn.LayerNorm(hidden_size)
+        self.norm = nn.LayerNorm(hidden_size, eps=norm_eps, bias=False)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.norm(x)
@@ -138,6 +142,7 @@ class SwishGLU(nn.Module):
         self,
         hidden_size: int = 768,
         intermediate_size: int = None,
+        norm_eps: float = 1e-5,
     ):
         super().__init__()
         if intermediate_size is None:
@@ -147,7 +152,7 @@ class SwishGLU(nn.Module):
         self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
         self.swish = nn.SiLU()
-        self.norm = nn.LayerNorm(hidden_size)
+        self.norm = nn.LayerNorm(hidden_size, eps=norm_eps, bias=False)
 
     @torch.compile
     def forward(self, x: torch.Tensor) -> torch.Tensor:

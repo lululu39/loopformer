@@ -2,7 +2,7 @@ import collections.abc
 import torch
 from torch import nn
 from typing import Optional
-
+from transformers.modeling_utils import PreTrainedModel
 
 class PatchEmbeddings(nn.Module):
     """
@@ -75,7 +75,7 @@ class ImageEmbeddings(nn.Module):
         self.position_embeddings = nn.Parameter(
             torch.randn(1, num_patches, config.hidden_size)
         )
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(0.0)
         self.patch_size = config.patch_size
         self.config = config
 
@@ -153,3 +153,20 @@ class ImageEmbeddings(nn.Module):
         embeddings = self.dropout(embeddings)
 
         return embeddings
+
+class Pooler(nn.Module):
+    """
+    Pool the output of a vision model by taking the mean of all tokens.
+    Adapted from huggingface/transformers ViT implementation.
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def forward(self, hidden_states):
+        pooled_output = hidden_states.mean(dim=1)  # always use mean pooling
+        pooled_output = self.dense(pooled_output)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
