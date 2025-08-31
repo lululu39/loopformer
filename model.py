@@ -103,8 +103,9 @@ class LoopFormerForImageClassification(LoopFormerPretrainedModel):
         num_loops = self.num_loops if num_loops is None else num_loops
 
         for loop in range(num_loops):
-            route_probs = self.router(hidden_states)  # [num_choices]
+            route_probs = self.router(hidden_states, loop=loop)  # [num_choices]
             idx = torch.argmax(route_probs)  # scalar
+            # print(idx.item())
             
             chosen_module = self.module_pool[idx]
             output = chosen_module(hidden_states)
