@@ -81,6 +81,11 @@ class LoopFormerForImageClassification(LoopFormerPretrainedModel):
                 num_choice=len(self.module_pool),
                 router_act=config.router_act,
             )
+        elif config.router_type == "linear_with_le":
+            self.router = LinearRouterWithLoopEmbedding(
+                hidden_size=self.hidden_size,
+                num_choice=len(self.module_pool)
+            )
         
         self.embeddings = ImageEmbeddings(config)
         self.pooler = Pooler(config)

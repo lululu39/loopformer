@@ -12,8 +12,8 @@ def main():
     # Device and hyperparameters
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size = 128
-    learning_rate = 3e-4
-    epochs = 50
+    learning_rate = 1e-3
+    epochs = 30
     
     # Mixed precision scaler
     scaler = GradScaler()
@@ -21,7 +21,6 @@ def main():
     # Data transforms
     train_transform = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        transforms.RandomCrop(32, padding=4),
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
@@ -30,6 +29,7 @@ def main():
     val_transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ])
     
     # Dataset and dataloader
@@ -41,18 +41,19 @@ def main():
     # Model configuration
     config = LoopFormerForImageClassificationConfig(
         hidden_size=384,
-        num_loops=6,
+        num_loops=3,
         num_heads=6,
         intermediate_size=1536,
         num_classes=10,
         image_size=224,
         patch_size=16,
         num_channels=3,
+        router_type="linear_with_le",
         modules={
-            "full_attention": 2,
-            "mlp": 2,
-            "swish_glu": 2,
-            "identity": 1
+            "full_attention": 1,
+            "mlp": 1,
+            "swish_glu": 1,
+            # "identity": 1
         }
     )
     
@@ -60,7 +61,7 @@ def main():
     model = LoopFormerForImageClassification(config).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.05)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-4)
 
     # Log model parameters
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -143,7 +144,6 @@ def main():
         # Save best model
         if test_acc > best_acc:
             best_acc = test_acc
-            torch.save(model.state_dict(), 'best_model.pth')
             print(f"New best accuracy: {best_acc:.2f}%")
         
         # Print epoch summary
