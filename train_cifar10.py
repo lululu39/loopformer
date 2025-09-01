@@ -41,7 +41,7 @@ def main():
     # Model configuration
     config = LoopFormerForImageClassificationConfig(
         hidden_size=384,
-        num_loops=3,
+        num_loops=6,
         num_heads=6,
         intermediate_size=1536,
         num_classes=10,
@@ -53,7 +53,7 @@ def main():
             "full_attention": 1,
             "mlp": 1,
             "swish_glu": 1,
-            # "identity": 1
+            "identity": 1
         }
     )
     

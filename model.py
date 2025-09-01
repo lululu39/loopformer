@@ -4,9 +4,10 @@ import torch
 from torch import nn
 from modules import *
 from router import *
-from utils import *
+from utils import get_module, ImageEmbeddings, Pooler
 from config import *
 from transformers.modeling_utils import PreTrainedModel
+from mixer import Mixer
 
 class LoopFormerPretrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
@@ -44,29 +45,7 @@ class LoopFormerForImageClassification(LoopFormerPretrainedModel):
         # Add modules to pool based on config
         for module_type, count in config.modules.items():
             for _ in range(count):
-                if module_type == "full_attention":
-                    module = FullAttention(
-                        hidden_size=self.hidden_size,
-                        num_heads=config.num_heads,
-                        norm_eps=config.layer_norm_eps
-                    )
-                elif module_type == "mlp":
-                    module = Mlp(
-                        hidden_size=self.hidden_size,
-                        intermediate_size=config.intermediate_size,
-                        norm_eps=config.layer_norm_eps
-                    )
-                elif module_type == "swish_glu":
-                    module = SwishGLU(
-                        hidden_size=self.hidden_size,
-                        intermediate_size=config.intermediate_size,
-                        norm_eps=config.layer_norm_eps
-                    )
-                elif module_type == "identity":
-                    module = Identity()
-                else:
-                    raise ValueError(f"Unknown module type: {module_type}")
-                
+                module = get_module(module_type, config)
                 self.module_pool.append(module)
         
         # Router for each turn
@@ -116,7 +95,12 @@ class LoopFormerForImageClassification(LoopFormerPretrainedModel):
             output = chosen_module(hidden_states)
             
             # Residual and update
-            hidden_states = hidden_states + output
+            if isinstance(chosen_module, Mixer):
+                # residual is handled inside mixer
+                hidden_states = output
+            else:
+                # manually handle residual
+                hidden_states = hidden_states + output
 
         hidden_states = self.pool_norm(hidden_states)
         hidden_states = self.pooler(hidden_states)

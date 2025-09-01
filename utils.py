@@ -2,7 +2,8 @@ import collections.abc
 import torch
 from torch import nn
 from typing import Optional
-from transformers.modeling_utils import PreTrainedModel
+from modules import *
+from mixer import Mixer
 
 class PatchEmbeddings(nn.Module):
     """
@@ -170,3 +171,45 @@ class Pooler(nn.Module):
         pooled_output = self.dense(pooled_output)
         pooled_output = self.activation(pooled_output)
         return pooled_output
+    
+
+def get_module(type, config):
+    if type == "full_attention":
+        return FullAttention(
+            hidden_size=config.hidden_size,
+            num_heads=config.num_heads,
+            norm_eps=config.layer_norm_eps
+        )
+    elif type == "mlp":
+        return Mlp(
+            hidden_size=config.hidden_size,
+            intermediate_size=config.intermediate_size,
+            norm_eps=config.layer_norm_eps
+        )
+    elif type == "swish_glu":
+        return SwishGLU(
+            hidden_size=config.hidden_size,
+            intermediate_size=config.intermediate_size,
+            norm_eps=config.layer_norm_eps
+        )
+    elif type == "identity":
+        return Identity()
+    elif "mixer" in type:
+        return get_mixer(type, config)
+    else:
+        raise ValueError(f"Unknown module type: {type}")
+
+
+def get_mixer(type, config):
+    if type == "mixer_1":
+        return Mixer(
+            token_mixer=get_module("full_attention", config),
+            channel_mixer=get_module("mlp", config),
+        )
+    elif type == "mixer_2":
+        return Mixer(
+            token_mixer=get_module("full_attention", config),
+            channel_mixer=get_module("swish_glu", config),
+        )
+    else:
+        raise ValueError(f"Unknown mixer type: {type}")
