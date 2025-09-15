@@ -107,3 +107,70 @@ class LoopFormerForImageClassification(LoopFormerPretrainedModel):
 
         return self.classifier(hidden_states) # return the logits
         
+
+class TransFormerPretrainedModel(PreTrainedModel):
+    supports_gradient_checkpointing = True
+    def _init_weights(self, module):
+        if isinstance(module, (nn.Linear, nn.Conv2d)):
+            module.weight.data = nn.init.trunc_normal_(
+                module.weight.data.to(torch.float32),
+                mean=0.0,
+                std=self.config.initializer_range,
+            ).to(module.weight.dtype)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.LayerNorm):
+            if module.bias is not None:
+                module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        elif isinstance(module, ImageEmbeddings):
+            if hasattr(module, "position_embeddings"):
+                module.position_embeddings.data = nn.init.trunc_normal_(
+                    module.position_embeddings.data.to(torch.float32),
+                    mean=0.0,
+                    std=self.config.initializer_range,
+                ).to(module.position_embeddings.dtype)
+
+class TransFormerForImageClassification(TransFormerPretrainedModel):
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.hidden_size = config.hidden_size
+        self.num_layers = config.num_layers
+        
+        self.layers = nn.ModuleList()
+
+        self.layer_type = config.layer_type
+        
+        # transformer uses fixed types of layers
+        for _ in range(self.layers):
+            module = get_module(self.layer_type, config)
+            self.layers.append(module)
+        
+        self.embeddings = ImageEmbeddings(config)
+        self.pooler = Pooler(config)
+        self.pool_norm = nn.LayerNorm(config.hidden_size, eps=1e-5, bias=False)
+        self.classifier = nn.Linear(config.hidden_size, config.num_classes)
+        self.init_weights()
+
+    
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass with router-based module selection
+        
+        Args:
+            hidden_states: Input tensor [B, L, D]
+            
+        Returns:
+            Output tensor [B, L, D]
+        """
+        hidden_states = self.embeddings(pixel_values)
+
+        for layer in range(self.layers):
+            hidden_states = self.layers[layer](hidden_states)
+
+        hidden_states = self.pool_norm(hidden_states)
+        hidden_states = self.pooler(hidden_states)
+
+        return self.classifier(hidden_states) # return the logits
