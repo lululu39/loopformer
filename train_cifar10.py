@@ -13,7 +13,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size = 128
     learning_rate = 1e-3
-    epochs = 30
+    epochs = 1
     
     # Mixed precision scaler
     scaler = GradScaler()
@@ -41,19 +41,17 @@ def main():
     # Model configuration
     config = LoopFormerForImageClassificationConfig(
         hidden_size=384,
-        num_loops=6,
+        num_loops=3,
         num_heads=6,
         intermediate_size=1536,
         num_classes=10,
         image_size=224,
         patch_size=16,
         num_channels=3,
-        router_type="linear_with_le",
+        router_type="mlp",
         modules={
-            "full_attention": 1,
-            "mlp": 1,
-            "swish_glu": 1,
-            "identity": 1
+            "mixer_1": 1,
+            "mixer_2": 1,
         }
     )
     
@@ -106,6 +104,8 @@ def main():
                 'Acc': f'{train_acc:.2f}%',
                 'LR': f'{optimizer.param_groups[0]["lr"]:.6f}'
             })
+
+            break
         
         scheduler.step()
         avg_train_loss = train_loss / len(train_loader)

@@ -13,7 +13,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     batch_size = 64
     learning_rate = 1e-4
-    epochs = 20
+    epochs = 1
     
     # Mixed precision scaler
     scaler = GradScaler()
@@ -34,7 +34,7 @@ def main():
     # Model configuration
     config = LoopFormerForImageClassificationConfig(
         hidden_size=256,
-        num_loops=3,
+        num_loops=2,
         num_heads=8,
         intermediate_size=1024,
         num_classes=10,
@@ -42,10 +42,8 @@ def main():
         patch_size=16,
         num_channels=1,
         modules={
-            "full_attention": 1,
-            "mlp": 1,
-            "swish_glu": 1,
-            "identity": 0
+            "mixer_1": 1,
+            "mixer_2": 1,
         }
     )
     
