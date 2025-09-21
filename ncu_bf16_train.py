@@ -45,7 +45,7 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
     criterion = torch.nn.CrossEntropyLoss()
 
-    for _ in range(10):
+    for _ in range(1):
         optimizer.zero_grad()
         outputs = model(x).logits
         loss = criterion(outputs, o)

@@ -39,12 +39,12 @@ def main():
                     device=device, dtype=torch.bfloat16)
 
     with torch.no_grad():
-        for _ in range(10):
+        for _ in range(1):
             _ = model(x)
         
     torch.cuda.synchronize()
     torch.cuda.nvtx.range_push("steady_eval")
-    
+
     with torch.no_grad():
         for _ in range(2):
             _ = model(x)
