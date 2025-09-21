@@ -18,7 +18,7 @@ def main():
 
     # NOTE: deltanet
     attn_config = {
-        'layers': [0, 2],
+        'layers': [],
         'num_heads': 16,
         "window_size_h": 48,
         "window_size_w": 24,
@@ -27,7 +27,7 @@ def main():
         "seq_len" : 4096,
     }
     cfg = DeltaNetVisionConfig(
-        hidden_size=448, num_hidden_layers=12, num_heads=16, intermediate_size=1792,
+        hidden_size=256, num_hidden_layers=4, num_heads=8, intermediate_size=1024,
         num_classes=10, image_size=224, patch_size=16, num_channels=1,
         attn_type="full_attn",
         train_scan_type="uni-scan",
@@ -39,10 +39,18 @@ def main():
                     device=device, dtype=torch.bfloat16)
 
     with torch.no_grad():
-        # warmup
-        for _ in range(20):
+        for _ in range(10):
             _ = model(x)
-        torch.cuda.synchronize()
+        
+    torch.cuda.synchronize()
+    torch.cuda.nvtx.range_push("steady_eval")
+    
+    with torch.no_grad():
+        for _ in range(2):
+            _ = model(x)
+        
+    torch.cuda.synchronize()
+    torch.cuda.nvtx.range_pop()
 
 if __name__ == "__main__":
     main()

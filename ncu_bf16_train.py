@@ -18,7 +18,7 @@ def main():
 
     # NOTE: deltanet
     attn_config = {
-        'layers': [0, 2],
+        'layers': [],
         'num_heads': 16,
         "window_size_h": 48,
         "window_size_w": 24,
@@ -44,7 +44,7 @@ def main():
     model.train()
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
     criterion = torch.nn.CrossEntropyLoss()
-    
+
     for _ in range(10):
         optimizer.zero_grad()
         outputs = model(x).logits
@@ -53,6 +53,18 @@ def main():
         optimizer.step()
 
     torch.cuda.synchronize()
+    torch.cuda.nvtx.range_push("steady_train")
+
+    for _ in range(2):
+        optimizer.zero_grad()
+        outputs = model(x).logits
+        loss = criterion(outputs, o)
+        loss.backward()
+        optimizer.step()
+
+    torch.cuda.synchronize()
+    torch.cuda.nvtx.range_pop()
+
 
 if __name__ == "__main__":
     main()
