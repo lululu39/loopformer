@@ -37,12 +37,22 @@ def main():
 
     x = torch.randn(64, cfg.num_channels, cfg.image_size, cfg.image_size,
                     device=device, dtype=torch.bfloat16)
+    
+    o = torch.randint(0, cfg.num_classes, (x.size(0),), device=device)
+    
+    # train using adamw
+    model.train()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
+    criterion = torch.nn.CrossEntropyLoss()
+    
+    for _ in range(10):
+        optimizer.zero_grad()
+        outputs = model(x).logits
+        loss = criterion(outputs, o)
+        loss.backward()
+        optimizer.step()
 
-    with torch.no_grad():
-        # warmup
-        for _ in range(20):
-            _ = model(x)
-        torch.cuda.synchronize()
+    torch.cuda.synchronize()
 
 if __name__ == "__main__":
     main()
