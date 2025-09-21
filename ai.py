@@ -41,8 +41,6 @@ def analyze_ncu_report(csv_file):
     # Calculate total FLOPs
     flop_metrics = [
         'sm__ops_path_tensor_src_bf16_dst_fp32.sum',
-        'sm__ops_path_tensor_src_bf16_dst_fp32_sparsity_off.sum',
-        'sm__ops_path_tensor_src_bf16_dst_fp32_sparsity_on.sum'
     ]
     
     total_flops = 0
